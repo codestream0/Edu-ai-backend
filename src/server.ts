@@ -5,7 +5,7 @@ import connectDB from './config/db';
 
 
 dotenv.config()
-const Port = process.env.port || 5000;
+const Port = process.env.port || 3000;
 
 const startServer = async ()=>{
     await connectDB();

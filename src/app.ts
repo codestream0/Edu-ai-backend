@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import authRouter from "./routes/auth.route";
 
 const app = express();
 
@@ -17,5 +18,7 @@ app.get("/",(req,res)=>{
         message:"EDU AI API is running"
     });
 });
+
+app.use("/api/auth",authRouter)
 
 export default app;
