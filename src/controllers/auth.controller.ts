@@ -79,3 +79,11 @@ export const loginController = async (
     }
 
 }
+
+// export const getMe = async (
+//     req:Request,
+//     res:Response
+// )=>{
+
+//     const use
+// }
