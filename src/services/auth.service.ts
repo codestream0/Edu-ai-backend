@@ -1,7 +1,7 @@
 import User from "../models/user"
 import { loginSchema, signupSchema } from "../validations/auth.validation"
 import bcrypt from "bcrypt"
-import { generateAceessToken,verifyAccessToken } from "../utils/jwt"
+import { generateAceessToken,generateRefreshToken, verifyRefreshToken } from "../utils/jwt"
 
 
 export const signup = async (data:unknown) => {
@@ -22,7 +22,8 @@ export const signup = async (data:unknown) => {
         email,
         password: hashPassword,
     })
-    const token = generateAceessToken(newUser.id)
+    const accessToken = generateAceessToken(newUser._id.toString())
+    const refreshToken = generateRefreshToken(newUser._id.toString())
 
     console.log(newUser)
 
@@ -30,8 +31,9 @@ export const signup = async (data:unknown) => {
         id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
+        accessToken,
+        refreshToken,
         createAt: newUser.createdAt,
-        token,
     })
 
 }
@@ -51,14 +53,28 @@ export const login = async (data:unknown)=>{
         throw new Error("User password is invalid");
     }
     console.log(existingUser)
-    const token = generateAceessToken(existingUser.id)
+    const accessToken = generateAceessToken(existingUser._id.toString())
+    const refreshToken = generateRefreshToken(existingUser._id.toString())
 
     return({
         id: existingUser._id,
         fullName:existingUser.fullName,
         email:existingUser.email,
+        accessToken,
+        refreshToken,
         createdAt:existingUser.createdAt,
-        token,
     })
 
+}
+
+
+export const refreshAccessToken = async (refreshToken: string)=>{
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await User.findById(decoded.userId);
+
+    if(!user){
+        throw new Error("user not found")
+    }
+
+    return generateAceessToken(user._id.toString())
 }
