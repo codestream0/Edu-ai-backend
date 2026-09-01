@@ -29,7 +29,7 @@ const userSchema =new Schema<IUser>(
             required: true,
             minLength: 6,
         },
-
+        
     },
     {
         timestamps:true,
