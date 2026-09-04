@@ -15,7 +15,7 @@ export const generateAceessToken = (userId:string)=>{
     return jwt.sign(
         {userId},
         accessSecret,
-        {expiresIn:"1m"}
+        {expiresIn:"5m"}
     );
 
 }

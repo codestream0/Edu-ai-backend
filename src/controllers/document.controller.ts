@@ -1,0 +1,31 @@
+import { AuthRequest } from "../middleware/auth.middleware";
+import {createDocument} from "../services/document.service";
+import { Request, Response } from "express";
+
+export const uploadDocumentController = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const uploadedDocument = await createDocument({
+      userId: req.user!.userId,
+      title: req.body.title || req.file.originalname,
+      originalName: req.file.originalname,
+      fileName: req.file.filename,
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileType: req.file.mimetype,
+      fileSize: req.file.size,
+    });
+    return res.status(201).json({
+        success: true,
+        message: "Document uploaded successfully",
+        document: uploadedDocument
+    });
+  } catch (error) {
+    return res.status(500).json({ 
+        success: false,
+        message: "Error uploading document"
+    });
+  }
+};
