@@ -3,6 +3,7 @@ import cors from "cors";
 import authRouter from "./routes/auth.route";
 import documentRouter from "./routes/document.route";
 import cookieParser from "cookie-parser";
+import taskRouter from "./routes/task.route";
 
 const app = express();
 
@@ -24,5 +25,6 @@ app.get("/",(req,res)=>{
 
 app.use("/api/auth",authRouter)
 app.use("/api/document",documentRouter)
+app.use("/api/task",taskRouter)
 
 export default app;
