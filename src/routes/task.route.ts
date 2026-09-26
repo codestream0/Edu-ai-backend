@@ -6,6 +6,6 @@ const taskRouter = Router();
 
 taskRouter.post("/",authMiddleware,createTaskController)
 taskRouter.get("/",authMiddleware,getAllTasks)
-taskRouter.get("/:taskId", authMiddleware,getTaskById);
+taskRouter.get("/:id", authMiddleware,getTaskById);
 
 export default taskRouter;

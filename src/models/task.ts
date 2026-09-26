@@ -1,6 +1,7 @@
 import mongoose,{Document,Schema} from "mongoose";
 
 export interface ITask extends Document{
+    owner:mongoose.Types.ObjectId,  
     title:string,
     description:string,
     status:string,
@@ -11,6 +12,7 @@ export interface ITask extends Document{
 }
 
 const taskSchema:Schema = new Schema<ITask>({
+    owner:{type:mongoose.Types.ObjectId,ref:"User",required:true},
     title:{type:String,required:true},
     description:{type:String,required:true},
     status:{type:String,required:true,enum:["pending","in-progress","completed"]},
