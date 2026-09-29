@@ -1,6 +1,7 @@
 import { AuthRequest } from "../middleware/auth.middleware";
 import {createDocument} from "../services/document.service";
 import { Request, Response } from "express";
+import DocumentModel from "../models/document";
 
 export const uploadDocumentController = async (req: AuthRequest, res: Response) => {
   try {
@@ -29,3 +30,14 @@ export const uploadDocumentController = async (req: AuthRequest, res: Response) 
     });
   }
 };
+
+
+export const getDocumentsController = async (req: AuthRequest, res: Response) => {
+  try{
+    const documents =await DocumentModel.find({ owner: req.user?.userId });
+    res.status(200).json({ success: true, documents })
+  }catch(error){
+    console.error("Get document error: ",error);
+    res.status(500).json({ success:false, message: "Failed to fetch documents" })
+  }
+}
