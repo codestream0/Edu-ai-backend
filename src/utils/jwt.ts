@@ -24,7 +24,7 @@ export const generateRefreshToken = (userId:string)=>{
     return jwt.sign(
         {userId},
         refreshSecret,
-        {expiresIn:"3m"}
+        {expiresIn:"10m"}
     )
 
 }
