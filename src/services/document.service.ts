@@ -8,6 +8,7 @@ interface Document {
     fileUrl: string;
     fileType: string;
     fileSize: number;
+    pageCount: number | null;
 }
 
 export const createDocument = async (documentData: Document) => {
@@ -19,7 +20,7 @@ export const createDocument = async (documentData: Document) => {
         fileUrl: documentData.fileUrl,
         fileType: documentData.fileType,
         fileSize:documentData.fileSize,
+        pageCount: documentData.pageCount,
     });
     return uploadedDocument;
 }
-
