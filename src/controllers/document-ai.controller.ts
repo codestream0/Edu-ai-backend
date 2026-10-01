@@ -12,12 +12,28 @@ export const generateDocumentSummaryController = async (
 ) => {
   try {
     const { id } = req.params;
+    console.log("\n==============================");
+    console.log("SUMMARY REQUEST");
+    console.log("==============================");
 
+    console.log("URL document ID:", id);
+    console.log("Authenticated user:", req.user?.userId);
     const document = await DocumentModel.findOne({
       _id: id,
       owner: req.user?.userId,
     });
 
+    console.log("Document found:", Boolean(document));
+
+    if (document) {
+      console.log("MongoDB document ID:", document._id.toString());
+      console.log("Document owner:", document.owner.toString());
+      console.log("Document status:", document.status);
+      console.log(
+        "Extracted text length:",
+        document.extractedText?.length ?? 0,
+      );
+    }
     if (!document) {
       return res.status(404).json({
         success: false,
@@ -28,8 +44,7 @@ export const generateDocumentSummaryController = async (
     if (!document.extractedText?.trim()) {
       return res.status(400).json({
         success: false,
-        message:
-          "Document has not been processed yet",
+        message: "Document has not been processed yet",
       });
     }
 
@@ -41,9 +56,7 @@ export const generateDocumentSummaryController = async (
       });
     }
 
-    const summary = await summarizeDocument(
-      document._id.toString(),
-    );
+    const summary = await summarizeDocument(document._id.toString());
 
     return res.status(200).json({
       success: true,
@@ -51,10 +64,7 @@ export const generateDocumentSummaryController = async (
       summary,
     });
   } catch (error) {
-    console.error(
-      "Generate document summary error:",
-      error,
-    );
+    console.error("Generate document summary error:", error);
 
     return res.status(500).json({
       success: false,

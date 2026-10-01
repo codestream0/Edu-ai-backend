@@ -1,29 +1,45 @@
-import { createWorker } from "tesseract.js";
+import { execFile } from "child_process";
+import { promisify } from "util";
 
-export const extractTextFromImages = async (
-  imagePaths: string[]
-): Promise<string> => {
-  if (imagePaths.length === 0) {
-    return "";
-  }
+const execFileAsync =
+  promisify(execFile);
 
-  const worker = await createWorker("eng");
+export const extractTextFromImage =
+  async (
+    imagePath: string,
+  ): Promise<string> => {
+    try {
+      const { stdout } =
+        await execFileAsync(
+          "tesseract",
+          [
+            imagePath,
+            "stdout",
+            "-l",
+            "eng",
+          ],
+          {
+            maxBuffer:
+              10 * 1024 * 1024,
+          },
+        );
 
-  try {
-    const extractedTexts: string[] = [];
+      return stdout.trim();
+    } catch (error: any) {
+      console.error(
+        "Tesseract OCR failed:",
+      );
 
-    for (const imagePath of imagePaths) {
-      const {
-        data: { text },
-      } = await worker.recognize(imagePath);
+      console.error(
+        error.stderr ||
+          error.message,
+      );
 
-      if (text.trim()) {
-        extractedTexts.push(text.trim());
-      }
+      throw new Error(
+        `OCR failed: ${
+          error.stderr ||
+          error.message
+        }`,
+      );
     }
-
-    return extractedTexts.join("\n\n");
-  } finally {
-    await worker.terminate();
-  }
-};
+  };
