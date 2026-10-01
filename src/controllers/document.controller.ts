@@ -3,7 +3,7 @@ import {createDocument} from "../services/document.service";
 import { Request, Response } from "express";
 import DocumentModel from "../models/document";
 import { calculatePageCount } from "../utils/document-pages";
-import { fa } from "zod/locales";
+import { processDocument } from "../services/document.service";
 
 export const uploadDocumentController = async (req: AuthRequest, res: Response) => {
   try {
@@ -16,11 +16,21 @@ export const uploadDocumentController = async (req: AuthRequest, res: Response) 
       title: req.body.title || req.file.originalname,
       originalName: req.file.originalname,
       fileName: req.file.filename,
-      fileUrl: `/uploads/${req.file.filename}`,
+      fileUrl: req.file.path,
       fileType: req.file.mimetype,
       fileSize: req.file.size,
       pageCount: await calculatePageCount(req.file.path, req.file.originalname),
     });
+
+    processDocument(uploadedDocument._id.toString()).catch(
+      (error: Error) => {
+        console.error(
+          `Failed to process document ${uploadedDocument._id}:`,
+          error
+        );
+      }
+    );
+
     return res.status(201).json({
         success: true,
         message: "Document uploaded successfully",
