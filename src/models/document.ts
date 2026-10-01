@@ -10,6 +10,7 @@ export interface IDocument extends Document{
     fileSize:number,
     pageCount:number | null,
     extractedText?:string,
+    summary?:string,
     status:"uploaded"|"processing"|"completed"|"failed",
     createdAt:Date,
     updatedAt:Date,
@@ -53,6 +54,9 @@ const documentSchema = new Schema<IDocument>(
             min:1,
         },
         extractedText:{
+            type:String,
+        },
+        summary:{
             type:String,
         },
         status:{
