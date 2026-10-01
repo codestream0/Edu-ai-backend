@@ -20,8 +20,13 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.2",
+    "mammoth": "^1.13.0",
     "mongoose": "^9.9.4",
     "multer": "^2.3.0",
+    "pdf-parse": "^2.4.5",
+    "pptx2json": "^0.0.10",
+    "tesseract.js": "^7.0.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -32,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.3.0",
+    "@types/pdf-parse": "^1.1.5",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
