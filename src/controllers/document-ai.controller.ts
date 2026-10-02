@@ -2,7 +2,7 @@ import { Response } from "express";
 
 import { AuthRequest } from "../middleware/auth.middleware";
 
-import DocumentModel from "../models/document";
+import DocumentModel from "../models/document.model";
 
 import { summarizeDocument } from "../services/document-ai.service";
 
@@ -19,7 +19,7 @@ export const generateDocumentSummaryController = async (
       owner: req.user?.userId,
     });
 
-    if(document){
+    if (document) {
       console.log("Document found: ", document._id, document.title);
       console.log("Document extractedText: ", document.extractedText);
       console.log("Document summary: ", document.summary);
@@ -69,5 +69,3 @@ export const generateDocumentSummaryController = async (
     });
   }
 };
-
-

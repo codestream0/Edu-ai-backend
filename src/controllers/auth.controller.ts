@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { login, refreshAccessToken, signup } from "../services/auth.service";
 import { ZodError } from "zod";
 import { AuthRequest } from "../middleware/auth.middleware";
-import User from "../models/user";
+import User from "../models/user.model";
 // import { generateAceessToken, verifyRefreshToken } from "../utils/jwt";
 
 export const signupController = async (req: Request, res: Response) => {

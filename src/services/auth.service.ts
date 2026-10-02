@@ -1,80 +1,79 @@
-import User from "../models/user"
-import { loginSchema, signupSchema } from "../validations/auth.validation"
-import bcrypt from "bcrypt"
-import { generateAceessToken,generateRefreshToken, verifyRefreshToken } from "../utils/jwt"
+import User from "../models/user.model";
+import { loginSchema, signupSchema } from "../validations/auth.validation";
+import bcrypt from "bcrypt";
+import {
+  generateAceessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt";
 
+export const signup = async (data: unknown) => {
+  const validateData = signupSchema.parse(data);
 
-export const signup = async (data:unknown) => {
-    const validateData = signupSchema.parse(data)
+  const { fullName, email, password } = validateData;
 
-    const{ fullName,email,password } = validateData;
+  const existingUser = await User.findOne({ email });
 
-    const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new Error("User already exist");
+  }
 
-    if(existingUser){
-        throw new Error("User already exist");
-    }
-    
-    const hashPassword = await bcrypt.hash(password,12)
+  const hashPassword = await bcrypt.hash(password, 12);
 
-    const newUser = await User.create({
-        fullName,
-        email,
-        password: hashPassword,
-    })
-    const accessToken = generateAceessToken(newUser._id.toString())
-    const refreshToken = generateRefreshToken(newUser._id.toString())
+  const newUser = await User.create({
+    fullName,
+    email,
+    password: hashPassword,
+  });
+  const accessToken = generateAceessToken(newUser._id.toString());
+  const refreshToken = generateRefreshToken(newUser._id.toString());
 
-    console.log(newUser)
+  console.log(newUser);
 
-    return({
-        id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        accessToken,
-        refreshToken,
-        createAt: newUser.createdAt,
-    })
+  return {
+    id: newUser._id,
+    fullName: newUser.fullName,
+    email: newUser.email,
+    accessToken,
+    refreshToken,
+    createAt: newUser.createdAt,
+  };
+};
 
-}
+export const login = async (data: unknown) => {
+  const validateData = loginSchema.parse(data);
+  const { email, password } = validateData;
 
+  const existingUser = await User.findOne({ email });
+  if (!existingUser) {
+    throw new Error("User credentials not found ");
+  }
+  const isPasswordValid = await bcrypt.compare(password, existingUser.password);
 
-export const login = async (data:unknown)=>{
-    const validateData = loginSchema.parse(data);
-    const { email,password } = validateData; 
+  if (!isPasswordValid) {
+    throw new Error("User password is invalid");
+  }
+  console.log(existingUser);
+  const accessToken = generateAceessToken(existingUser._id.toString());
+  const refreshToken = generateRefreshToken(existingUser._id.toString());
 
-    const existingUser = await User.findOne({ email });
-    if (!existingUser){
-        throw new Error("User credentials not found ");
-    }
-    const isPasswordValid = await bcrypt.compare(password,existingUser.password);
+  return {
+    id: existingUser._id,
+    fullName: existingUser.fullName,
+    email: existingUser.email,
+    accessToken,
+    refreshToken,
+    createdAt: existingUser.createdAt,
+  };
+};
 
-    if (!isPasswordValid){
-        throw new Error("User password is invalid");
-    }
-    console.log(existingUser)
-    const accessToken = generateAceessToken(existingUser._id.toString())
-    const refreshToken = generateRefreshToken(existingUser._id.toString())
+export const refreshAccessToken = async (refreshToken: string) => {
+  const decoded = verifyRefreshToken(refreshToken);
+  const user = await User.findById(decoded.userId);
 
-    return({
-        id: existingUser._id,
-        fullName:existingUser.fullName,
-        email:existingUser.email,
-        accessToken,
-        refreshToken,
-        createdAt:existingUser.createdAt,
-    })
+  if (!user) {
+    throw new Error("user not found");
+  }
 
-}
-
-
-export const refreshAccessToken = async (refreshToken: string)=>{
-    const decoded = verifyRefreshToken(refreshToken);
-    const user = await User.findById(decoded.userId);
-
-    if(!user){
-        throw new Error("user not found")
-    }
-
-    return generateAceessToken(user._id.toString())
-}
+  return generateAceessToken(user._id.toString());
+};
