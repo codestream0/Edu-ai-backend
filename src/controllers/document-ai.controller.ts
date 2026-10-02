@@ -12,28 +12,19 @@ export const generateDocumentSummaryController = async (
 ) => {
   try {
     const { id } = req.params;
-    console.log("\n==============================");
-    console.log("SUMMARY REQUEST");
-    console.log("==============================");
+    const regenerate = req.query.regenerate === "true";
 
-    console.log("URL document ID:", id);
-    console.log("Authenticated user:", req.user?.userId);
     const document = await DocumentModel.findOne({
       _id: id,
       owner: req.user?.userId,
     });
 
-    console.log("Document found:", Boolean(document));
-
-    if (document) {
-      console.log("MongoDB document ID:", document._id.toString());
-      console.log("Document owner:", document.owner.toString());
-      console.log("Document status:", document.status);
-      console.log(
-        "Extracted text length:",
-        document.extractedText?.length ?? 0,
-      );
+    if(document){
+      console.log("Document found: ", document._id, document.title);
+      console.log("Document extractedText: ", document.extractedText);
+      console.log("Document summary: ", document.summary);
     }
+
     if (!document) {
       return res.status(404).json({
         success: false,
@@ -48,20 +39,26 @@ export const generateDocumentSummaryController = async (
       });
     }
 
-    if (document.summary?.trim()) {
+    // Return the cached summary only when regeneration isn't requested.
+    if (!regenerate && document.summary?.trim()) {
       return res.status(200).json({
         success: true,
-        message: "Document summary already exists",
+        message: "Summary retrieved successfully",
         summary: document.summary,
+        cached: true,
       });
     }
 
+    // Generate a fresh summary when regenerate=true.
     const summary = await summarizeDocument(document._id.toString());
 
     return res.status(200).json({
       success: true,
-      message: "Document summarized successfully",
+      message: regenerate
+        ? "Summary regenerated successfully"
+        : "Summary generated successfully",
       summary,
+      cached: false,
     });
   } catch (error) {
     console.error("Generate document summary error:", error);
@@ -72,3 +69,5 @@ export const generateDocumentSummaryController = async (
     });
   }
 };
+
+
