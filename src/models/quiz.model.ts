@@ -23,7 +23,7 @@ const quizQuestionSchema = new Schema<QuizQuestion>(
     },
     question: { type: String, required: true },
     options: { type: [String], default: [] },
-    correctAnswer: { type: String, required: true, select: false },
+    correctAnswer: { type: String, required: true },
     acceptedAnswers: { type: [String], default: [], select: false },
     explanation: { type: String, required: true },
     points: { type: Number, default: 1, min: 1 },

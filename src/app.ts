@@ -5,6 +5,7 @@ import documentRouter from "./routes/document.routes";
 import cookieParser from "cookie-parser";
 import taskRouter from "./routes/task.routes";
 import quizRouter from "./routes/quiz.routes";
+import progressRouter from "./routes/progress.routes";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.get("/",(req,res)=>{
 app.use("/api/auth",authRouter)
 app.use("/api/document",documentRouter)
 app.use("/api/quiz",quizRouter)
+app.use("/api/progress",progressRouter)
 app.use("/api/task",taskRouter)
 
 export default app;

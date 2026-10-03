@@ -2,7 +2,7 @@ import { Response } from "express";
 import mongoose from "mongoose";
 
 import type { AuthRequest } from "../middleware/auth.middleware";
-import QuizModel from "../models/quiz.model";
+import QuizModel, { QuizQuestion } from "../models/quiz.model";
 import QuizAttemptModel from "../models/quiz-attempt.model";
 import {
   createQuizSchema,
@@ -390,46 +390,29 @@ export async function getQuizResultsController(
       ]),
     );
 
-    const review = quiz.questions.map(
-      (question: {
-        questionId: unknown;
-        question: any;
-        type: any;
-        options: any;
-        correctAnswer: any;
-        explanation: any;
-        points: any;
-      }) => {
-        const submitted = answerMap.get(String(question.questionId));
 
-        return {
-          questionId: question.questionId,
-          question: question.question,
-          type: question.type,
-          options: question.options,
-          submittedAnswer: submitted?.answer ?? "",
-          correctAnswer: question.correctAnswer,
-          isCorrect: submitted?.isCorrect ?? false,
-          explanation: question.explanation,
-          pointsAwarded: submitted?.pointsAwarded ?? 0,
-          points: question.points,
-        };
-      },
-    );
+  const safeQuestions = quiz.questions.map((question: QuizQuestion) => ({
+    questionId: question.questionId,
+    type: question.type,
+    question: question.question,
+    options: question.options,
+    points: question.points,
+  }));
 
-    return res.status(200).json({
-      success: true,
-      result: {
-        attemptId: attempt._id,
-        quizId: quiz._id,
-        title: quiz.title,
-        score: attempt.score,
-        totalPoints: attempt.totalPoints,
-        percentage: attempt.percentage,
-        completedAt: attempt.completedAt,
-        review,
-      },
-    });
+  return res.status(200).json({
+    success: true,
+    quiz: {
+      id: quiz._id,
+      title: quiz.title,
+      sourceDocument: quiz.sourceDocument,
+      questionType: quiz.questionType,
+      questionCount: quiz.questionCount,
+      difficulty: quiz.difficulty,
+      answerFeedback: quiz.answerFeedback,
+      questions: safeQuestions,
+    },
+  });
+
   } catch (error) {
     console.error("Get quiz results error:", error);
 
