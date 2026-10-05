@@ -1,11 +1,16 @@
 import User from "../models/user.model";
 import { loginSchema, signupSchema } from "../validations/auth.validation";
 import bcrypt from "bcrypt";
+import { transporter } from "../config/mailer";
+import crypto from "crypto";
+import { render } from "@react-email/render";
+
 import {
   generateAceessToken,
   generateRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt";
+import PasswordResetEmail from "../emails/passwordResetEmail";
 
 export const signup = async (data: unknown) => {
   const validateData = signupSchema.parse(data);
@@ -77,3 +82,68 @@ export const refreshAccessToken = async (refreshToken: string) => {
 
   return generateAceessToken(user._id.toString());
 };
+
+export const forgotPassword = async (email: string) => {
+  const user = await User.findOne({ email }).select(
+    "+passwordResetTokenHash +passwordResetExpiresAt",
+  );
+
+  if (!user) {
+    return {
+      message:
+        "If an account exists with that email, a password reset link has been sent.",
+    };
+  }
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetTokenHash = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  const resetTokenExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  user.passwordResetTokenHash = resetTokenHash;
+  user.passwordResetExpiresAt = resetTokenExpiresAt;
+  await user.save();
+
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+  const emailHtml = await render(
+    PasswordResetEmail({
+      resetUrl,
+    }),
+  );
+
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM,
+    to: user.email,
+    subject: "Reset your EDU AI password",
+    html: emailHtml,
+    text: `Reset your EDU AI password: ${resetUrl}`,
+  });
+
+  return {
+    message:
+      "If an account exists with that email, a password reset link has been sent.",
+  };
+};
+
+export const resetPassword = async (resetToken: string, newPassword: string) => {
+  const resetTokenHash = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+    
+  const user = await User.findOne({ passwordResetTokenHash: resetTokenHash,passwordResetExpiresAt: { $gt: new Date() } }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+  
+  if (!user) {
+    throw new Error("Invalid or expired reset token");
+  }
+  user.password = await bcrypt.hash(newPassword, 12);
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpiresAt = undefined;
+  await user.save();
+
+  return {
+    message: "Password reset successfully",
+  };
+}

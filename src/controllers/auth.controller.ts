@@ -1,5 +1,15 @@
 import { Request, Response } from "express";
-import { login, refreshAccessToken, signup } from "../services/auth.service";
+import {
+  login,
+  refreshAccessToken,
+  signup,
+  forgotPassword,
+  resetPassword,
+} from "../services/auth.service";
+import {
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "../validations/auth.validation";
 import { ZodError } from "zod";
 import { AuthRequest } from "../middleware/auth.middleware";
 import User from "../models/user.model";
@@ -111,6 +121,63 @@ export const logout = (req: Request, res: Response) => {
     success: true,
     message: "Logged out successfully",
   });
+};
+
+export const forgotPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    const result = await forgotPassword(email);
+
+    return res.status(200).json({
+      success: true,
+      result,
+      message: "Password reset email sent successfully",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Something went wrong.",
+    });
+  }
+};
+
+export const resetPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    const result = await resetPassword(token, password);
+
+    return res.status(200).json({
+      success: true,
+      result,
+      message: "Password reset successfully",
+    });
+  } catch (error:any) {
+    if (error?.name === "ZodError") {
+      return res.status(400).json({
+        message: error.issues[0]?.message || "Invalid request",
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Invalid or expired password reset token"
+    ) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    console.error("Reset password error:", error);
+
+    return res.status(500).json({
+      message: "Something went wrong. Please try again later.",
+    });
+  }
 };
 
 export const getMe = async (req: AuthRequest, res: Response) => {
