@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import taskRouter from "./routes/task.routes";
 import quizRouter from "./routes/quiz.routes";
 import progressRouter from "./routes/progress.routes";
+import chatRouter from "./routes/ai-chat.routes";
 
 const app = express();
 
@@ -29,6 +30,6 @@ app.use("/api/auth",authRouter)
 app.use("/api/document",documentRouter)
 app.use("/api/quiz",quizRouter)
 app.use("/api/progress",progressRouter)
-app.use("/api/task",taskRouter)
+app.use("/api/ai-chat",chatRouter)
 
 export default app;
