@@ -31,36 +31,41 @@ export const getConversation = async (
   }
 
   const messages = await Message.find({ conversation: conversationId })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: 1 })
     .lean();
+
+  const formattedMessages = messages.map((message) => ({
+    id: message._id.toString(),
+    role: message.role,
+    content: message.content,
+  }));
 
   return {
     conversation,
-    messages,
+    messages: formattedMessages,
   };
 };
 
-export const deleteConversation = async(
-    userId:string,
-    conversationId:string,
-)=>{
-    
-    if(!mongoose.Types.ObjectId.isValid(userId)){
-        throw new Error("Invalid userID");
-    }
+export const deleteConversation = async (
+  userId: string,
+  conversationId: string,
+) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error("Invalid userID");
+  }
 
-    if(!mongoose.Types.ObjectId.isValid(conversationId)){
-        throw new Error("Invalid conversation ID")
-    }
-    const conversation = await Conversation.findByIdAndDelete({
-        _id: conversationId,
-        user: userId,
-    });
-    if(!conversation){
-        throw new Error("conversation not found");
-    }
-    await Message.deleteMany({
-        conversation: conversationId,
-    })
-    return conversation;
-}
+  if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+    throw new Error("Invalid conversation ID");
+  }
+  const conversation = await Conversation.findByIdAndDelete({
+    _id: conversationId,
+    user: userId,
+  });
+  if (!conversation) {
+    throw new Error("conversation not found");
+  }
+  await Message.deleteMany({
+    conversation: conversationId,
+  });
+  return conversation;
+};
