@@ -1,16 +1,12 @@
 import DocumentModel from "../models/document.model";
-import QuizModel from "../models/quiz.model";
 import QuizAttemptModel from "../models/quiz-attempt.model";
 
-function getStartOfWeek(date = new Date()) {
+function getStartOfRollingDays(days = 7, date = new Date()) {
   const start = new Date(date);
+
   start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
 
-  // Monday is the first day of the week.
-  const day = start.getDay();
-  const daysSinceMonday = (day + 6) % 7;
-
-  start.setDate(start.getDate() - daysSinceMonday);
   return start;
 }
 
@@ -20,8 +16,20 @@ function getDayLabel(date: Date) {
   });
 }
 
+function getDateKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function getDateString(date: Date) {
+  return `${date.getFullYear()}-${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export async function getStudyProgress(ownerId: string) {
   const owner = ownerId;
+
+  const rollingStart = getStartOfRollingDays(7);
 
   const [
     documentsStudied,
@@ -57,9 +65,12 @@ export async function getStudyProgress(ownerId: string) {
       .limit(5)
       .lean(),
 
+    // Get all completed quiz attempts from the last 7 calendar days.
     QuizAttemptModel.find({
       owner,
-      completedAt: { $gte: getStartOfWeek() },
+      completedAt: {
+        $gte: rollingStart,
+      },
     })
       .select("completedAt")
       .lean(),
@@ -76,6 +87,7 @@ export async function getStudyProgress(ownerId: string) {
       )
     : 0;
 
+  // Latest quiz performance.
   const performance = allAttempts
     .slice()
     .reverse()
@@ -85,70 +97,81 @@ export async function getStudyProgress(ownerId: string) {
       score: attempt.percentage,
     }));
 
-  // Count completed quiz attempts for each day of the current week.
-  const weekStart = getStartOfWeek();
   const studyActivity = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + index);
+    const date = new Date(rollingStart);
+
+    date.setDate(rollingStart.getDate() + index);
+
+    const sessions = activityAttempts.filter((attempt) => {
+      const completed = new Date(attempt.completedAt);
+
+      return (
+        completed.getFullYear() === date.getFullYear() &&
+        completed.getMonth() === date.getMonth() &&
+        completed.getDate() === date.getDate()
+      );
+    }).length;
 
     return {
       day: getDayLabel(date),
-      date: date.toISOString().slice(0, 10),
-      sessions: activityAttempts.filter((attempt) => {
-        const completed = new Date(attempt.completedAt);
-        return (
-          completed.getFullYear() === date.getFullYear() &&
-          completed.getMonth() === date.getMonth() &&
-          completed.getDate() === date.getDate()
-        );
-      }).length,
+      date: getDateString(date),
+      sessions,
     };
   });
 
-  // Consecutive calendar days with at least one completed quiz.
+  // ------------------------------------------------------------
+  // Study streak
+  // ------------------------------------------------------------
+
   const completedDays = new Set(
     allAttempts.map((attempt) => {
       const date = new Date(attempt.completedAt);
-      return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      return getDateKey(date);
     }),
   );
 
   const today = new Date();
-  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+  const todayKey = getDateKey(today);
+
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+
+  const yesterdayKey = getDateKey(yesterday);
 
   let studyStreak = 0;
+
   const streakDate = new Date(today);
 
-  // If the user hasn't studied today, allow the streak to continue
-  // from yesterday. Otherwise, count from today.
+  // If the user hasn't studied today,
+  // allow the streak to continue from yesterday.
   if (!completedDays.has(todayKey)) {
     if (completedDays.has(yesterdayKey)) {
       streakDate.setDate(streakDate.getDate() - 1);
     } else {
-      streakDate.setTime(0);
+      // No activity today or yesterday.
+      studyStreak = 0;
     }
   }
 
-  if (
-    completedDays.has(
-      `${streakDate.getFullYear()}-${streakDate.getMonth()}-${streakDate.getDate()}`,
-    )
-  ) {
-    while (
-      completedDays.has(
-        `${streakDate.getFullYear()}-${streakDate.getMonth()}-${streakDate.getDate()}`,
-      )
-    ) {
+  if (studyStreak === 0 && completedDays.has(getDateKey(streakDate))) {
+    while (completedDays.has(getDateKey(streakDate))) {
       studyStreak++;
+
       streakDate.setDate(streakDate.getDate() - 1);
     }
   }
 
-  // Temporary learning insights: group question accuracy by quiz title.
-  // These are quiz-level groupings, not actual subject-topic classifications.
+  // ------------------------------------------------------------
+  // Learning insights
+  // ------------------------------------------------------------
+
+  // Temporary learning insights:
+  // group question accuracy by quiz title.
+  //
+  // These are quiz-level groupings,
+  // not actual subject-topic classifications.
+
   const topicStats = new Map<
     string,
     { correct: number; total: number }
@@ -167,8 +190,12 @@ export async function getStudyProgress(ownerId: string) {
 
     const correctQuestionIds = new Set(
       answers
-        .filter((answer: { isCorrect: boolean }) => answer.isCorrect)
-        .map((answer: { questionId: string }) => answer.questionId),
+        .filter(
+          (answer: { isCorrect: boolean }) => answer.isCorrect,
+        )
+        .map(
+          (answer: { questionId: string }) => answer.questionId,
+        ),
     );
 
     const existing = topicStats.get(title) ?? {
@@ -178,6 +205,7 @@ export async function getStudyProgress(ownerId: string) {
 
     existing.correct += correctQuestionIds.size;
     existing.total += answers.length;
+
     topicStats.set(title, existing);
   }
 
@@ -205,9 +233,13 @@ export async function getStudyProgress(ownerId: string) {
       averageScore,
       studyStreak,
     },
+
     performance,
+
     recentAttempts,
+
     studyActivity,
+
     learningInsights: {
       strongTopics,
       practiceTopics,
