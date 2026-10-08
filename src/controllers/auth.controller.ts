@@ -15,26 +15,49 @@ import { AuthRequest } from "../middleware/auth.middleware";
 import User from "../models/user.model";
 // import { generateAceessToken, verifyRefreshToken } from "../utils/jwt";
 
-export const signupController = async (req: Request, res: Response) => {
+export const signupController = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    const user = await signup(req.body);
+    const result = await signup(req.body);
 
-    res.cookie("refreshToken", user.refreshToken, {
+    const {
+      refreshToken,
+      accessToken,
+      id,
+      fullName,
+      email,
+      createdAt,
+    } = result;
+
+    // Store refresh token securely in an httpOnly cookie.
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      // secure:true,
-      sameSite: "lax",
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? "none"
+          : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Account created successfully",
-      user,
+
+      user: {
+        _id: id,
+        fullName,
+        email,
+        createdAt,
+      },
+
+      accessToken,
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Validation failed",
         errors: error.issues.map((issue) => ({
@@ -42,37 +65,61 @@ export const signupController = async (req: Request, res: Response) => {
           message: issue.message,
         })),
       });
-      return;
     }
+
     console.error("Signup error:", error);
 
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
-      message: error instanceof Error ? error.message : "Something went wrong",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
     });
   }
 };
 
-export const loginController = async (req: Request, res: Response) => {
+export const loginController = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    const user = await login(req.body);
+    const result = await login(req.body);
 
-    res.cookie("refreshToken", user.refreshToken, {
+    const {
+      refreshToken,
+      accessToken,
+      id,
+      fullName,
+      email,
+      createdAt,
+    } = result;
+
+
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      // secure:true,
-      sameSite: "lax",
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? "none"
+          : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: "Login successfully",
-      user,
+      user: {
+        _id: id,
+        fullName,
+        email,
+        createdAt,
+      },
+      accessToken,
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Validation failed",
         errors: error.issues.map((issue) => ({
@@ -80,13 +127,16 @@ export const loginController = async (req: Request, res: Response) => {
           message: issue.message,
         })),
       });
-      return;
     }
+
     console.error("login error:", error);
 
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
-      message: error instanceof Error ? error.message : "Something went wrong",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
     });
   }
 };
@@ -95,7 +145,7 @@ export const refreshToken = async (req: Request, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
-      res.status(401).json({
+      return res.status(401).json({
         success: false,
         message: "refresh token is not found",
       });
@@ -156,7 +206,7 @@ export const resetPasswordController = async (req: Request, res: Response) => {
       result,
       message: "Password reset successfully",
     });
-  } catch (error:any) {
+  } catch (error: any) {
     if (error?.name === "ZodError") {
       return res.status(400).json({
         message: error.issues[0]?.message || "Invalid request",

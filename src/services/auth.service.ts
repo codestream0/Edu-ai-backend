@@ -20,7 +20,7 @@ export const signup = async (data: unknown) => {
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
-    throw new Error("User already exist");
+    throw new Error("User already exists");
   }
 
   const hashPassword = await bcrypt.hash(password, 12);
@@ -30,10 +30,9 @@ export const signup = async (data: unknown) => {
     email,
     password: hashPassword,
   });
+
   const accessToken = generateAceessToken(newUser._id.toString());
   const refreshToken = generateRefreshToken(newUser._id.toString());
-
-  console.log(newUser);
 
   return {
     id: newUser._id,
@@ -41,7 +40,7 @@ export const signup = async (data: unknown) => {
     email: newUser.email,
     accessToken,
     refreshToken,
-    createAt: newUser.createdAt,
+    createdAt: newUser.createdAt,
   };
 };
 
@@ -127,14 +126,20 @@ export const forgotPassword = async (email: string) => {
   };
 };
 
-export const resetPassword = async (resetToken: string, newPassword: string) => {
+export const resetPassword = async (
+  resetToken: string,
+  newPassword: string,
+) => {
   const resetTokenHash = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-    
-  const user = await User.findOne({ passwordResetTokenHash: resetTokenHash,passwordResetExpiresAt: { $gt: new Date() } }).select("+passwordResetTokenHash +passwordResetExpiresAt");
-  
+
+  const user = await User.findOne({
+    passwordResetTokenHash: resetTokenHash,
+    passwordResetExpiresAt: { $gt: new Date() },
+  }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+
   if (!user) {
     throw new Error("Invalid or expired reset token");
   }
@@ -146,4 +151,4 @@ export const resetPassword = async (resetToken: string, newPassword: string) => 
   return {
     message: "Password reset successfully",
   };
-}
+};
