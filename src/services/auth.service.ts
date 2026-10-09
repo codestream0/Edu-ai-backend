@@ -1,5 +1,11 @@
 import User from "../models/user.model";
-import { loginSchema, signupSchema } from "../validations/auth.validation";
+import {
+  loginSchema,
+  signupSchema,
+  updatePreferencesSchema,
+  changePasswordSchema,
+  updateProfileSchema,
+} from "../validations/auth.validation";
 import bcrypt from "bcrypt";
 import { transporter } from "../config/mailer";
 import crypto from "crypto";
@@ -48,7 +54,7 @@ export const login = async (data: unknown) => {
   const validateData = loginSchema.parse(data);
   const { email, password } = validateData;
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email }).select("+password");
   if (!existingUser) {
     throw new Error("User credentials not found ");
   }
@@ -138,7 +144,7 @@ export const resetPassword = async (
   const user = await User.findOne({
     passwordResetTokenHash: resetTokenHash,
     passwordResetExpiresAt: { $gt: new Date() },
-  }).select("+passwordResetTokenHash +passwordResetExpiresAt");
+  }).select("+password +passwordResetTokenHash +passwordResetExpiresAt");
 
   if (!user) {
     throw new Error("Invalid or expired reset token");
@@ -151,4 +157,84 @@ export const resetPassword = async (
   return {
     message: "Password reset successfully",
   };
+};
+
+export const updateProfile = async (userId: string, data: unknown) => {
+  const validatedData = updateProfileSchema.parse(data);
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { fullName: validatedData.fullName } },
+    { returnDocument: "after", runValidators: true },
+  ).select("-password");
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return {
+    _id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+};
+
+export const changePassword = async (userId: string, data: unknown) => {
+  const validatedData = changePasswordSchema.parse(data);
+
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw new Error("User not found");
+  }
+  const isCurrentPasswordValid = await bcrypt.compare(
+    validatedData.currentPassword,
+    user.password,
+  );
+  if (!isCurrentPasswordValid) {
+    throw new Error("current password is incorrect");
+  }
+  user.password = await bcrypt.hash(validatedData.newPassword, 12);
+  user.passwordResetTokenHash = null;
+  user.passwordResetExpiresAt = null;
+
+  await user.save();
+
+  return { message: "Password changed successfully" };
+};
+
+export const getPreferences = async (userId: string) => {
+  const user = await User.findById(userId).select("-password");
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user.preferences;
+};
+
+export const updatePreferences = async (userId: string, data: unknown) => {
+  const validatedData = updatePreferencesSchema.parse(data);
+  const updates: Record<string, unknown> = {};
+
+  if (validatedData.theme !== undefined) {
+    updates["preferences.theme"] = validatedData.theme;
+  }
+
+  if (validatedData.notifications) {
+    for (const [key, value] of Object.entries(validatedData.notifications)) {
+      if (value !== undefined) {
+        updates[`preferences.notifications.${key}`] = value;
+      }
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: updates },
+    { returnDocument: "after", runValidators: true, upsert: false },
+  ).select("-password");
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user.preferences;
 };
