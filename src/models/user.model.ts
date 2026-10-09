@@ -8,6 +8,14 @@ export interface IUser extends Document {
   updatedAt: Date;
   passwordResetTokenHash?: string | null;
   passwordResetExpiresAt?: Date | null;
+  preferences: {
+    theme: "light" | "dark" | "system";
+    notifications: {
+      studyReminders: boolean;
+      quizResults: boolean;
+      productUpdates: boolean;
+    };
+  };
 }
 
 const userSchema = new Schema<IUser>(
@@ -30,6 +38,7 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: true,
       minLength: 6,
+      select: false,
     },
     passwordResetTokenHash: {
       type: String,
@@ -41,6 +50,18 @@ const userSchema = new Schema<IUser>(
       type: Date,
       default: null,
       select: false,
+    },
+    preferences: {
+      theme: {
+        type: String,
+        enum: ["light", "dark", "system"],
+        default: "system",
+      },
+      notifications: {
+        studyReminders: { type: Boolean, default: true },
+        quizResults: { type: Boolean, default: true },
+        productUpdates: { type: Boolean, default: false },
+      },
     },
   },
   {
