@@ -5,6 +5,10 @@ import {
   signup,
   forgotPassword,
   resetPassword,
+  changePassword,
+  getPreferences,
+  updateProfile,
+  updatePreferences,
 } from "../services/auth.service";
 import {
   forgotPasswordSchema,
@@ -15,30 +19,18 @@ import { AuthRequest } from "../middleware/auth.middleware";
 import User from "../models/user.model";
 // import { generateAceessToken, verifyRefreshToken } from "../utils/jwt";
 
-export const signupController = async (
-  req: Request,
-  res: Response,
-) => {
+export const signupController = async (req: Request, res: Response) => {
   try {
     const result = await signup(req.body);
 
-    const {
-      refreshToken,
-      accessToken,
-      id,
-      fullName,
-      email,
-      createdAt,
-    } = result;
+    const { refreshToken, accessToken, id, fullName, email, createdAt } =
+      result;
 
     // Store refresh token securely in an httpOnly cookie.
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? "none"
-          : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -71,38 +63,22 @@ export const signupController = async (
 
     return res.status(400).json({
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Something went wrong",
+      message: error instanceof Error ? error.message : "Something went wrong",
     });
   }
 };
 
-export const loginController = async (
-  req: Request,
-  res: Response,
-) => {
+export const loginController = async (req: Request, res: Response) => {
   try {
     const result = await login(req.body);
 
-    const {
-      refreshToken,
-      accessToken,
-      id,
-      fullName,
-      email,
-      createdAt,
-    } = result;
-
+    const { refreshToken, accessToken, id, fullName, email, createdAt } =
+      result;
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? "none"
-          : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -133,10 +109,7 @@ export const loginController = async (
 
     return res.status(400).json({
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Something went wrong",
+      message: error instanceof Error ? error.message : "Something went wrong",
     });
   }
 };
@@ -248,5 +221,120 @@ export const getMe = async (req: AuthRequest, res: Response) => {
       success: false,
       message: "Failed to get user",
     });
+  }
+};
+
+export const updateProfileController = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const user = await updateProfile(req.user.userId, req.body);
+    return res
+      .status(200)
+      .json({ success: true, message: "Profile updated successfully", user });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+    }
+    const message =
+      error instanceof Error ? error.message : "Something went wrong";
+    return res
+      .status(message === "User not found" ? 404 : 400)
+      .json({ success: false, message });
+  }
+};
+
+export const changePasswordController = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const result = await changePassword(req.user.userId, req.body);
+    return res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+    }
+    const message =
+      error instanceof Error ? error.message : "Something went wrong";
+    const status = message === "User not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message });
+  }
+};
+
+export const getPreferencesController = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const preferences = await getPreferences(req.user.userId);
+    return res.status(200).json({ success: true, preferences });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Something went wrong";
+    return res
+      .status(message === "User not found" ? 404 : 500)
+      .json({ success: false, message });
+  }
+};
+
+export const updatePreferencesController = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const preferences = await updatePreferences(req.user.userId, req.body);
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Preferences updated successfully",
+        preferences,
+      });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Validation failed",
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join("."),
+            message: issue.message,
+          })),
+        });
+    }
+    const message =
+      error instanceof Error ? error.message : "Something went wrong";
+    return res
+      .status(message === "User not found" ? 404 : 500)
+      .json({ success: false, message });
   }
 };
